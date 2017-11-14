@@ -26,11 +26,8 @@ public class Config {
 	static {
 		InputStream is = null;
 		try {
-			String pathProperty = System.getProperty("user.dir") + File.separator +"src" + File.separator + "config.ini";
-//			String pathProperty = System.getProperty("user.dir") + File.separator + "config.ini";
-			is = new FileInputStream(new File(pathProperty)); 
 			Properties prop = new Properties();
-			prop.load(is);
+			prop.load(Config.class.getResourceAsStream("/config.ini"));
 			
 			redisSelect = Integer.parseInt(prop.getProperty("redis_select").toString());
 			
