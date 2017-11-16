@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+	http://www.springframework.org/schema/context 
+    http://www.springframework.org/schema/context/spring-context-4.1.xsd
+	http://www.springframework.org/schema/data/mongo 
+	http://www.springframework.org/schema/data/mongo/spring-mongo.xsd"
+       default-autowire="byName">
+    <!-- default-autowire="byName" 设置Spring的自动装配方式。autowire的方便之处在减少或者消除属性或构造器参数的设置 -->
+
+    <context:property-placeholder location="classpath:*.properties"/>
+    <bean class="com.changhong.db.SpringApplicationContext"/>
+    <context:annotation-config/>
+
+
+    <!--ArangoConfig-->
+    <bean id="arangoConfigEntity" class="com.changhong.db.arango.ArangoConfig">
+        <property name="host" value="${arango.host}"/>
+        <property name="port" value="${arango.port}"/>
+        <property name="userName" value="${arango.userName}"/>
+        <property name="password" value="${arango.password}"/>
+        <property name="dbNames">
+            <list>
+                <value>${arango.dbName.ziyan}</value>
+            </list>
+        </property>
+    </bean>
+    <bean id="arangoEntity" class="com.changhong.db.arango.ArangoEntityHelper" init-method="init"
+          destroy-method="shutDown">
+        <property name="config" ref="arangoConfigEntity"/>
+    </bean>
+
+    <!--mongo-->
+    <mongo:mongo-client id="mongoConnection" host="${mongo.host}" port="${mongo.port}">
+        <mongo:client-options write-concern="NORMAL" connections-per-host="${mongo.connections}"
+                              max-wait-time="${mongo.maxWaitTime}"
+                              threads-allowed-to-block-for-connection-multiplier="${mongo.threads}" />
+    </mongo:mongo-client>
+
+    <mongo:db-factory id="mongoDbFactory" dbname="${mongo.semantic.dbName}" mongo-ref="mongoConnection"/>
+    <mongo:mapping-converter db-factory-ref="mongoDbFactory"
+                             base-package="com.changhong.db.mongo"/>
+    <bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg name="mongoDbFactory" ref="mongoDbFactory"/>
+    </bean>
+
+    <!--redis-->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="${redis.pool.maxActive}"/>
+        <property name="maxIdle" value="${redis.pool.maxIdle}"/>
+        <property name="maxWaitMillis" value="${redis.pool.maxWait}"/>
+        <property name="testOnBorrow" value="${redis.pool.testOnBorrow}"/>
+        <property name="testWhileIdle" value="${redis.pool.testWhileIdle}"/>
+    </bean>
+
+    <bean id="jedisConnFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+          destroy-method="destroy">
+        <property name="usePool" value="true"/>
+        <property name="hostName" value="${redis.ip}"/>
+        <property name="port" value="${redis.port}"/>
+        <property name="poolConfig" ref="jedisPoolConfig"/>
+        <property name="database" value="${redis.db}"/>
+    </bean>
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="jedisConnFactory"/>
+        <property name="keySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="valueSerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="hashKeySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="hashValueSerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+    </bean>
+
+</beans>
